@@ -83,6 +83,21 @@ class MaktabatiApp:
             command=self.root.destroy,
         )
         quit_button.pack(fill="x", pady=7)
+        add_button = tk.Button(
+            left_panel,
+            text="Ajouter un livre",
+            font=("Calibri", 13, "bold"),
+            bg="#6b4226",
+            fg="white",
+            activebackground="#5e4432",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=12,
+            cursor="hand2",
+            command=self._open_add_form,
+        )
+        add_button.pack(fill="x", pady=7)
 
         count_card = tk.Frame(left_panel, bg="#fffaf3", bd=1, relief="solid", padx=14, pady=14)
         count_card.pack(fill="x", pady=(22, 0))
@@ -152,6 +167,8 @@ class MaktabatiApp:
         except json.JSONDecodeError:
             return []
 
+        if isinstance(data, dict) and isinstance(data.get("book"), list):
+            return data["book"]
         return data if isinstance(data, list) else []
 
     def _show_books(self) -> None:
@@ -180,6 +197,15 @@ class MaktabatiApp:
                 line = f"{index}. {book}"
 
             self.books_listbox.insert(tk.END, line)
+
+    def _open_add_form(self) -> None:
+        from ui.form import BookForm
+        from tkinter import Toplevel
+        win = Toplevel(self.root)
+        win.title("Ajouter un livre")
+        win.geometry("360x220")
+        win.configure(bg="#f4efe6")
+        BookForm(win, on_success=lambda: [self._show_books(), win.destroy()])
 
     def run(self) -> None:
         self.root.mainloop()

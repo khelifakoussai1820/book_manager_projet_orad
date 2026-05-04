@@ -18,4 +18,5 @@ def load_books():
 # Sauvegarder les livres dans le fichier
 def save_books(books):
     with open(FICHIER, "w") as f:
+
         json.dump({"book": books}, f, indent=4)

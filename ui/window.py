@@ -15,6 +15,7 @@ class MaktabatiApp:
         self.root.configure(bg="#f4efe6")
         self.count_var = tk.StringVar(value="0 livre disponible")
         self.books_listbox: tk.Listbox | None = None
+        self._search_panel = None
 
         self._build_header()
         self._build_content()
@@ -83,6 +84,7 @@ class MaktabatiApp:
             command=self.root.destroy,
         )
         quit_button.pack(fill="x", pady=7)
+
         add_button = tk.Button(
             left_panel,
             text="Ajouter un livre",
@@ -137,7 +139,11 @@ class MaktabatiApp:
             fg="#6c5a4c",
             bg="#fffaf3",
         )
-        list_subtitle.pack(anchor="w", pady=(6, 12))
+        list_subtitle.pack(anchor="w", pady=(6, 8))
+
+        from ui.search import SearchPanel
+        self._search_panel = SearchPanel(right_panel, on_search=self._on_search_result)
+        self._search_panel.pack(fill="x", pady=(0, 8))
 
         list_frame = tk.Frame(right_panel, bg="#f8efe3", padx=10, pady=10)
         list_frame.pack(fill="both", expand=True)
@@ -171,8 +177,9 @@ class MaktabatiApp:
             return data["book"]
         return data if isinstance(data, list) else []
 
-    def _show_books(self) -> None:
-        books = self._load_books()
+    def _show_books(self, books: list | None = None) -> None:
+        if books is None:
+            books = self._load_books()
         total = len(books)
         suffix = "livre disponible" if total == 1 else "livres disponibles"
         self.count_var.set(f"{total} {suffix}")
@@ -198,6 +205,10 @@ class MaktabatiApp:
 
             self.books_listbox.insert(tk.END, line)
 
+    def _on_search_result(self, results: list | None) -> None:
+        """Called by SearchPanel: None means reset, list means filtered results."""
+        self._show_books(results)
+
     def _open_add_form(self) -> None:
         from ui.form import BookForm
         from tkinter import Toplevel
@@ -205,7 +216,14 @@ class MaktabatiApp:
         win.title("Ajouter un livre")
         win.geometry("360x220")
         win.configure(bg="#f4efe6")
-        BookForm(win, on_success=lambda: [self._show_books(), win.destroy()])
+
+        def on_success():
+            self._show_books()
+            if self._search_panel:
+                self._search_panel.refresh()
+            win.destroy()
+
+        BookForm(win, on_success=on_success)
 
     def run(self) -> None:
         self.root.mainloop()

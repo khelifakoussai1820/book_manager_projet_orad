@@ -1,22 +1,35 @@
 import json
-import os
+from pathlib import Path
 
-FICHIER = "data/books.json"
 
-# Charger les livres depuis le fichier
+BOOKS_FILE = Path(__file__).resolve().parent.parent / "data" / "books.json"
+
+
 def load_books():
-    if not os.path.exists(FICHIER):
+    """Load books from data/books.json."""
+    if not BOOKS_FILE.exists():
         return []
-    with open(FICHIER, "r") as f:
-        data = json.load(f)
+
+    content = BOOKS_FILE.read_text(encoding="utf-8").strip()
+    if not content:
+        return []
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError:
+        return []
 
     if isinstance(data, dict) and isinstance(data.get("book"), list):
         return data["book"]
 
     return data if isinstance(data, list) else []
 
-# Sauvegarder les livres dans le fichier
-def save_books(books):
-    with open(FICHIER, "w") as f:
 
-        json.dump({"book": books}, f, indent=4)
+def save_books(books):
+    """Save books to data/books.json."""
+    BOOKS_FILE.parent.mkdir(parents=True, exist_ok=True)
+    data = {"book": books}
+    BOOKS_FILE.write_text(
+        json.dumps(data, indent=4, ensure_ascii=False),
+        encoding="utf-8",
+    )

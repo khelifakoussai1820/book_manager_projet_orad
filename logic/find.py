@@ -22,9 +22,12 @@ def _load_books() -> list[dict]:
         return []
     return [
         {
+            "id":     b.get("id", ""),
             "title":  b.get("title")  or b.get("titre")  or "",
             "author": b.get("author") or b.get("auteur") or "",
             "year":   str(b.get("year") or b.get("annee") or b.get("date") or ""),
+            "isbn":   b.get("isbn", ""),
+            "status": b.get("status", ""),
         }
         for b in books if isinstance(b, dict)
     ]

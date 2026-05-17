@@ -195,6 +195,7 @@ class MaktabatiApp:
                 stretch=col in {"title", "author"},
             )
 
+
         vsb = ttk.Scrollbar(
             table_frame,
             orient="vertical",

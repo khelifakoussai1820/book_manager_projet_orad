@@ -57,14 +57,6 @@
             "status": "borrowed"
         },
         {
-            "id": "8",
-            "title": "The Hobbit",
-            "author": "J. R. R. Tolkien",
-            "year": 1937,
-            "isbn": "978-0547928227",
-            "status": "available"
-        },
-        {
             "id": "9",
             "title": "Pride and Prejudice",
             "author": "Jane Austen",
@@ -75,7 +67,7 @@
         {
             "id": "10",
             "title": "The Lord of the Rings",
-            "author": "J. R. R. Tolkien",
+            "author": "J. RR. Tolkien",
             "year": 1954,
             "isbn": "978-0544003415",
             "status": "available"
@@ -159,7 +151,22 @@
             "year": 2018,
             "isbn": "978-0735211292",
             "status": "available"
+        },
+        {
+            "id": 21,
+            "title": "Le Petit Prince",
+            "author": "Antoine de Saint-Exupéry",
+            "year": 1943,
+            "isbn": "978-2070408504",
+            "status": "available"
+        },
+        {
+            "id": 22,
+            "title": "aljebre",
+            "author": "el khwarizmi",
+            "year": 1123,
+            "isbn": "978-0061122415",
+            "status": "available"
         }
-        
     ]
 }

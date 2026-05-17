@@ -4,7 +4,7 @@ from logic.book import add_book
 
 class BookForm:
     def __init__(self, parent, on_success=None):
-        self.on_success = on_success  # optional callback to refresh list
+        self.on_success = on_success
 
         tk.Label(parent, text="Titre *").grid(row=0, column=0, sticky="w", padx=8, pady=4)
         self.title = tk.Entry(parent, width=30)
@@ -22,7 +22,6 @@ class BookForm:
         self.isbn = tk.Entry(parent, width=30)
         self.isbn.grid(row=3, column=1, padx=8, pady=4)
 
-        # FIX: button moved to row=4 (was overlapping ISBN at row=4, col=1)
         tk.Button(parent, text="Ajouter", command=self.submit, bg="#6b4226", fg="white",
                   padx=12, pady=6).grid(row=4, column=1, sticky="e", padx=8, pady=10)
 
@@ -33,17 +32,23 @@ class BookForm:
         isbn   = self.isbn.get().strip()
 
         if not title or not author:
-            messagebox.showerror("Erreur", "Titre et Auteur sont obligatoires !")
+            messagebox.showerror("Erreur", "Le titre et l'auteur sont obligatoires.")
             return
 
-        book = add_book(title, author, year, isbn)
-        messagebox.showinfo("Succès", f"Livre '{title}' ajouté (ID: {book['id']}) !")
+        if year and not year.isdigit():
+            messagebox.showerror("Erreur", "L'année doit être un nombre (ex: 2024) !")
+            return
 
-        # Clear fields after success
+        try:
+            add_book(title, author, year, isbn)
+            self.clear_form()
+            if self.on_success:
+                self.on_success()
+        except Exception as e:
+            messagebox.showerror("Erreur", f"Une erreur est survenue: {e}")
+
+    def clear_form(self):  # ✅ DANS la classe, bien indenté
         self.title.delete(0, tk.END)
         self.author.delete(0, tk.END)
         self.year.delete(0, tk.END)
         self.isbn.delete(0, tk.END)
-
-        if self.on_success:
-            self.on_success()

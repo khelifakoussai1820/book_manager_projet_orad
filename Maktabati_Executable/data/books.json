@@ -1,0 +1,71 @@
+{
+    "books": [
+        {
+            "id": "1",
+            "title": "The Great Gatsby",
+            "author": "F. Scott Fitzgerald",
+            "year": 1925,
+            "isbn": "978-0743273565",
+            "status": "available"
+        },
+        {
+            "id": "2",
+            "title": "To Kill a Mockingbird",
+            "author": "Harper Lee",
+            "year": 1960,
+            "isbn": "978-0061120084",
+            "status": "available"
+        },
+        {
+            "id": "3",
+            "title": "1984",
+            "author": "George Orwell",
+            "year": 1949,
+            "isbn": "978-0451524935",
+            "status": "available"
+        },
+        {
+            "id": "4",
+            "title": "Python 101",
+            "author": "John Doe",
+            "year": 2024,
+            "isbn": "978-0000000000",
+            "status": "available"
+        },
+        {
+            "id": "5",
+            "title": "Brave New World",
+            "author": "Aldous Huxley",
+            "year": 1932,
+            "isbn": "978-0060850524",
+            "status": "available"
+        }
+    ],
+    "students": [
+        {
+            "student_id": "655464",
+            "first_name": "slimghmdflggkglkfngdf",
+            "last_name": "glksdngklfdng",
+            "borrowed_book_ids": []
+        }
+    ],
+    "borrowings": [],
+    "users": [
+        {
+            "username": "admin",
+            "password": "admin123",
+            "role": "admin",
+            "student_id": "",
+            "first_name": "Admin",
+            "last_name": "Principal"
+        },
+        {
+            "username": "pfdhsmjgh",
+            "password": "sldmfhdmslks",
+            "role": "student",
+            "student_id": "655464",
+            "first_name": "slimghmdflggkglkfngdf",
+            "last_name": "glksdngklfdng"
+        }
+    ]
+}

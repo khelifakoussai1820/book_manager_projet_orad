@@ -1,5 +1,6 @@
-from ui.window import launch_app
+from ui.app import MaktabatiApp
 
 
 if __name__ == "__main__":
-    launch_app()
+    app = MaktabatiApp()
+    app.run()

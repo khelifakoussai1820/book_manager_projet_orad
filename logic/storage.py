@@ -10,6 +10,16 @@ DEFAULT_STATE = {
     "books": [],
     "students": [],
     "borrowings": [],
+    "users": [
+        {
+            "username": "admin",
+            "password": "admin123",
+            "role": "admin",
+            "student_id": "",
+            "first_name": "Admin",
+            "last_name": "Principal",
+        }
+    ],
 }
 
 
@@ -27,6 +37,10 @@ def _coerce_book(raw_book):
     }
 
 
+def _default_users():
+    return deepcopy(DEFAULT_STATE["users"])
+
+
 def _normalize_state(raw_data):
     if isinstance(raw_data, list):
         raw_data = {"books": raw_data}
@@ -36,6 +50,7 @@ def _normalize_state(raw_data):
             "books": raw_data.get("book", []),
             "students": raw_data.get("students", []),
             "borrowings": raw_data.get("borrowings", []),
+            "users": raw_data.get("users", []),
         }
 
     if not isinstance(raw_data, dict):
@@ -88,10 +103,33 @@ def _normalize_state(raw_data):
             }
         )
 
+    users = []
+    for raw_user in raw_data.get("users", []):
+        if not isinstance(raw_user, dict):
+            continue
+        username = str(raw_user.get("username", "")).strip()
+        role = str(raw_user.get("role", "")).strip().lower()
+        if not username or role not in {"admin", "student"}:
+            continue
+        users.append(
+            {
+                "username": username,
+                "password": str(raw_user.get("password", "")).strip(),
+                "role": role,
+                "student_id": str(raw_user.get("student_id", "")).strip(),
+                "first_name": str(raw_user.get("first_name", "")).strip(),
+                "last_name": str(raw_user.get("last_name", "")).strip(),
+            }
+        )
+
+    if not any(user["role"] == "admin" for user in users):
+        users.extend(_default_users())
+
     state = {
         "books": books,
         "students": students,
         "borrowings": borrowings,
+        "users": users,
     }
     _sync_computed_fields(state)
     return state
@@ -155,3 +193,7 @@ def load_students():
 
 def load_borrowings():
     return load_state()["borrowings"]
+
+
+def load_users():
+    return load_state()["users"]

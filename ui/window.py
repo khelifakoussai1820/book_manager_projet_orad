@@ -1,10 +1,11 @@
 import tkinter as tk
 from tkinter import messagebox, ttk
 
+from logic.auth import authenticate_user, get_default_admin_credentials, register_student_account
 from logic.book import delete_book, find_book
 from logic.borrow import borrow_book, get_all_borrowings, get_blacklisted_students, get_student_borrowings, return_book
 from logic.storage import load_books
-from logic.student import find_student, upsert_student
+from logic.student import find_student
 from ui.edit_form import EditForm
 from ui.form import BookForm
 from ui.search import SearchPanel
@@ -15,56 +16,35 @@ class MaktabatiApp:
         self.root = tk.Tk()
         self.root.title("Maktabati")
         self.root.geometry("1280x760")
-        self.root.minsize(1100, 680)
+        self.root.minsize(980, 640)
         self.root.configure(bg="#f4efe6")
+
+        self.current_user = None
+        self.current_student = None
+        self.current_view = None
 
         self.admin_books = []
         self.student_books = []
-        self.current_student = None
 
-        self.student_id_var = tk.StringVar()
-        self.student_first_name_var = tk.StringVar()
-        self.student_last_name_var = tk.StringVar()
+        self.login_role_var = tk.StringVar(value="student")
+        self.login_username_var = tk.StringVar()
+        self.login_password_var = tk.StringVar()
+
+        self.register_username_var = tk.StringVar()
+        self.register_password_var = tk.StringVar()
+        self.register_student_id_var = tk.StringVar()
+        self.register_first_name_var = tk.StringVar()
+        self.register_last_name_var = tk.StringVar()
+
         self.borrow_duration_var = tk.StringVar(value="14")
-        self.student_info_var = tk.StringVar(value="Aucun étudiant chargé.")
+        self.student_info_var = tk.StringVar(value="")
 
-        self._build_header()
-        self._build_body()
-        self.refresh_all_views()
-
-    def _build_header(self):
-        header = tk.Frame(self.root, bg="#6b4226", padx=24, pady=18)
-        header.pack(fill="x")
-
-        tk.Label(
-            header,
-            text="Maktabati",
-            font=("Georgia", 24, "bold"),
-            fg="#fff8ef",
-            bg="#6b4226",
-        ).pack(anchor="w")
-
-        tk.Label(
-            header,
-            text="Bibliothèque desktop avec rôles Admin et Étudiant",
-            font=("Calibri", 12),
-            fg="#f4dfc8",
-            bg="#6b4226",
-        ).pack(anchor="w", pady=(4, 0))
-
-    def _build_body(self):
         self._apply_tree_style()
+        self._show_login_screen()
 
-        notebook = ttk.Notebook(self.root)
-        notebook.pack(fill="both", expand=True, padx=16, pady=16)
-
-        self.admin_tab = tk.Frame(notebook, bg="#f4efe6")
-        self.student_tab = tk.Frame(notebook, bg="#f4efe6")
-        notebook.add(self.admin_tab, text="Admin")
-        notebook.add(self.student_tab, text="Étudiant")
-
-        self._build_admin_tab()
-        self._build_student_tab()
+    def _clear_root(self):
+        for child in self.root.winfo_children():
+            child.destroy()
 
     def _apply_tree_style(self):
         style = ttk.Style()
@@ -75,18 +55,187 @@ class MaktabatiApp:
         style.configure("Treeview", rowheight=28, font=("Calibri", 11))
         style.configure("Treeview.Heading", font=("Calibri", 11, "bold"))
 
-    def _build_admin_tab(self):
-        left = tk.Frame(self.admin_tab, bg="#f4efe6", padx=10, pady=10)
+    def _build_header(self, subtitle):
+        header = tk.Frame(self.root, bg="#6b4226", padx=24, pady=18)
+        header.pack(fill="x")
+
+        top_row = tk.Frame(header, bg="#6b4226")
+        top_row.pack(fill="x")
+
+        left = tk.Frame(top_row, bg="#6b4226")
+        left.pack(side="left", fill="x", expand=True)
+
+        tk.Label(
+            left,
+            text="Maktabati",
+            font=("Georgia", 24, "bold"),
+            fg="#fff8ef",
+            bg="#6b4226",
+        ).pack(anchor="w")
+
+        tk.Label(
+            left,
+            text=subtitle,
+            font=("Calibri", 12),
+            fg="#f4dfc8",
+            bg="#6b4226",
+        ).pack(anchor="w", pady=(4, 0))
+
+        if self.current_user:
+            right = tk.Frame(top_row, bg="#6b4226")
+            right.pack(side="right")
+
+            identity = self.current_user["username"]
+            if self.current_user["role"] == "student":
+                identity = f"{self.current_user['first_name']} {self.current_user['last_name']} ({identity})"
+
+            tk.Label(
+                right,
+                text=f"Connecté : {identity}",
+                font=("Calibri", 11, "bold"),
+                fg="#fff8ef",
+                bg="#6b4226",
+            ).pack(anchor="e")
+
+            tk.Button(
+                right,
+                text="Déconnexion",
+                command=self._logout,
+                bg="#f1d7ba",
+                fg="#4b2e1f",
+                bd=0,
+                padx=12,
+                pady=6,
+            ).pack(anchor="e", pady=(8, 0))
+
+    def _show_login_screen(self):
+        self.current_view = "login"
+        self.current_user = None
+        self.current_student = None
+        self._clear_root()
+        self._build_header("Connexion obligatoire pour accéder à l'application")
+
+        wrapper = tk.Frame(self.root, bg="#f4efe6", padx=24, pady=24)
+        wrapper.pack(fill="both", expand=True)
+
+        login_card = tk.Frame(wrapper, bg="#fffaf3", bd=1, relief="solid", padx=20, pady=20)
+        login_card.pack(side="left", fill="both", expand=True, padx=(0, 12))
+
+        register_card = tk.Frame(wrapper, bg="#fffaf3", bd=1, relief="solid", padx=20, pady=20)
+        register_card.pack(side="right", fill="both", expand=True, padx=(12, 0))
+
+        tk.Label(login_card, text="Connexion", font=("Georgia", 18, "bold"), bg="#fffaf3", fg="#4b2e1f").pack(anchor="w")
+        tk.Label(
+            login_card,
+            text="Admin par défaut : admin / admin123",
+            font=("Calibri", 11),
+            bg="#fffaf3",
+            fg="#6b4226",
+        ).pack(anchor="w", pady=(4, 16))
+
+        self._labeled_entry(login_card, "Rôle", self.login_role_var, readonly_values=("student", "admin"))
+        self._labeled_entry(login_card, "Nom d'utilisateur", self.login_username_var)
+        self._labeled_entry(login_card, "Mot de passe", self.login_password_var, show="*")
+
+        tk.Button(
+            login_card,
+            text="Se connecter",
+            command=self._login,
+            bg="#6b4226",
+            fg="white",
+            bd=0,
+            padx=16,
+            pady=10,
+        ).pack(anchor="e", pady=(16, 0))
+
+        tk.Label(register_card, text="Créer un compte étudiant", font=("Georgia", 18, "bold"), bg="#fffaf3", fg="#4b2e1f").pack(anchor="w")
+        tk.Label(
+            register_card,
+            text="Les comptes admin ne se créent pas ici.",
+            font=("Calibri", 11),
+            bg="#fffaf3",
+            fg="#6b4226",
+        ).pack(anchor="w", pady=(4, 16))
+
+        self._labeled_entry(register_card, "Nom d'utilisateur", self.register_username_var)
+        self._labeled_entry(register_card, "Mot de passe", self.register_password_var, show="*")
+        self._labeled_entry(register_card, "ID étudiant", self.register_student_id_var)
+        self._labeled_entry(register_card, "Prénom", self.register_first_name_var)
+        self._labeled_entry(register_card, "Nom", self.register_last_name_var)
+
+        tk.Button(
+            register_card,
+            text="Créer le compte",
+            command=self._register_student,
+            bg="#6b4226",
+            fg="white",
+            bd=0,
+            padx=16,
+            pady=10,
+        ).pack(anchor="e", pady=(16, 0))
+
+    def _login(self):
+        user = authenticate_user(
+            self.login_username_var.get(),
+            self.login_password_var.get(),
+            self.login_role_var.get(),
+        )
+        if not user:
+            messagebox.showerror("Erreur", "Identifiants invalides.")
+            return
+
+        self.current_user = user
+        if user["role"] == "admin":
+            self._show_admin_dashboard()
+        else:
+            self.current_student = find_student(user["student_id"])
+            self._show_student_dashboard()
+
+    def _register_student(self):
+        try:
+            user = register_student_account(
+                self.register_username_var.get(),
+                self.register_password_var.get(),
+                self.register_student_id_var.get(),
+                self.register_first_name_var.get(),
+                self.register_last_name_var.get(),
+            )
+        except ValueError as exc:
+            messagebox.showerror("Erreur", str(exc))
+            return
+
+        self.login_role_var.set("student")
+        self.login_username_var.set(user["username"])
+        self.login_password_var.set(user["password"])
+        self.register_username_var.set("")
+        self.register_password_var.set("")
+        self.register_student_id_var.set("")
+        self.register_first_name_var.set("")
+        self.register_last_name_var.set("")
+        messagebox.showinfo("Succès", "Compte étudiant créé. Vous pouvez vous connecter.")
+
+    def _logout(self):
+        self.login_password_var.set("")
+        self._show_login_screen()
+
+    def _show_admin_dashboard(self):
+        self.current_view = "admin"
+        self._clear_root()
+        self._build_header("Espace administration")
+
+        body = tk.Frame(self.root, bg="#f4efe6", padx=16, pady=16)
+        body.pack(fill="both", expand=True)
+
+        left = tk.Frame(body, bg="#f4efe6")
         left.pack(side="left", fill="both", expand=True)
 
-        right = tk.Frame(self.admin_tab, bg="#f4efe6", padx=10, pady=10, width=360)
-        right.pack(side="right", fill="y")
+        right = tk.Frame(body, bg="#f4efe6", width=360)
+        right.pack(side="right", fill="y", padx=(12, 0))
         right.pack_propagate(False)
 
         books_card = self._create_card(left, "Catalogue des livres")
         self.admin_search = SearchPanel(books_card, on_search=self._show_admin_books, include_status=True)
         self.admin_search.pack(fill="x", pady=(0, 10))
-
         self.admin_books_tree = self._create_tree(
             books_card,
             ("id", "title", "author", "year", "isbn", "status"),
@@ -98,7 +247,7 @@ class MaktabatiApp:
                 "isbn": ("ISBN", 150, "center"),
                 "status": ("Statut", 100, "center"),
             },
-            height=12,
+            12,
         )
         self.admin_books_tree.pack(fill="both", expand=True)
 
@@ -121,25 +270,16 @@ class MaktabatiApp:
                 "due_date": ("Retour prévu", 110, "center"),
                 "status": ("Statut", 90, "center"),
             },
-            height=10,
+            10,
         )
         self.borrowings_tree.pack(fill="both", expand=True)
-
-        borrowing_actions = tk.Frame(borrowings_card, bg="#fffaf3")
-        borrowing_actions.pack(fill="x", pady=(10, 0))
-        self._action_button(borrowing_actions, "Marquer comme retourné", self._return_selected_borrowing).pack(side="left")
+        actions = tk.Frame(borrowings_card, bg="#fffaf3")
+        actions.pack(fill="x", pady=(10, 0))
+        self._action_button(actions, "Marquer comme retourné", self._return_selected_borrowing).pack(side="left")
 
         summary_card = self._create_card(right, "Administration")
         self.admin_counts_var = tk.StringVar(value="")
-        tk.Label(
-            summary_card,
-            textvariable=self.admin_counts_var,
-            justify="left",
-            anchor="w",
-            bg="#fffaf3",
-            fg="#4b2e1f",
-            font=("Calibri", 12),
-        ).pack(fill="x")
+        tk.Label(summary_card, textvariable=self.admin_counts_var, justify="left", bg="#fffaf3", fg="#4b2e1f", font=("Calibri", 12)).pack(fill="x")
 
         blacklist_card = self._create_card(right, "Liste noire")
         self.blacklist_tree = self._create_tree(
@@ -150,28 +290,28 @@ class MaktabatiApp:
                 "student_name": ("Étudiant", 150, "w"),
                 "late_books": ("Livres en retard", 320, "w"),
             },
-            height=18,
+            18,
         )
         self.blacklist_tree.pack(fill="both", expand=True)
 
-    def _build_student_tab(self):
-        left = tk.Frame(self.student_tab, bg="#f4efe6", padx=10, pady=10, width=320)
+        self.refresh_admin_views()
+
+    def _show_student_dashboard(self):
+        self.current_view = "student"
+        self._clear_root()
+        self._build_header("Espace étudiant")
+
+        body = tk.Frame(self.root, bg="#f4efe6", padx=16, pady=16)
+        body.pack(fill="both", expand=True)
+
+        left = tk.Frame(body, bg="#f4efe6", width=320)
         left.pack(side="left", fill="y")
         left.pack_propagate(False)
 
-        right = tk.Frame(self.student_tab, bg="#f4efe6", padx=10, pady=10)
-        right.pack(side="right", fill="both", expand=True)
+        right = tk.Frame(body, bg="#f4efe6")
+        right.pack(side="right", fill="both", expand=True, padx=(12, 0))
 
-        profile_card = self._create_card(left, "Profil étudiant")
-        self._labeled_entry(profile_card, "ID étudiant", self.student_id_var)
-        self._labeled_entry(profile_card, "Prénom", self.student_first_name_var)
-        self._labeled_entry(profile_card, "Nom", self.student_last_name_var)
-        self._labeled_entry(profile_card, "Durée (jours)", self.borrow_duration_var)
-
-        actions = tk.Frame(profile_card, bg="#fffaf3")
-        actions.pack(fill="x", pady=(10, 0))
-        self._action_button(actions, "Charger / enregistrer", self._load_or_create_student).pack(side="left")
-
+        profile_card = self._create_card(left, "Mon profil")
         tk.Label(
             profile_card,
             textvariable=self.student_info_var,
@@ -179,12 +319,13 @@ class MaktabatiApp:
             fg="#4b2e1f",
             justify="left",
             wraplength=250,
-        ).pack(fill="x", pady=(12, 0))
+            font=("Calibri", 12),
+        ).pack(fill="x")
+        self._labeled_entry(profile_card, "Durée d'emprunt (jours)", self.borrow_duration_var)
 
-        books_card = self._create_card(right, "Livres disponibles pour l'étudiant")
+        books_card = self._create_card(right, "Catalogue")
         self.student_search = SearchPanel(books_card, on_search=self._show_student_books, include_status=True)
         self.student_search.pack(fill="x", pady=(0, 10))
-
         self.student_books_tree = self._create_tree(
             books_card,
             ("id", "title", "author", "year", "isbn", "status"),
@@ -196,17 +337,17 @@ class MaktabatiApp:
                 "isbn": ("ISBN", 150, "center"),
                 "status": ("Statut", 100, "center"),
             },
-            height=10,
+            10,
         )
         self.student_books_tree.pack(fill="both", expand=True)
 
-        student_actions = tk.Frame(books_card, bg="#fffaf3")
-        student_actions.pack(fill="x", pady=(10, 0))
-        self._action_button(student_actions, "Emprunter le livre sélectionné", self._borrow_selected_book).pack(side="left")
+        actions = tk.Frame(books_card, bg="#fffaf3")
+        actions.pack(fill="x", pady=(10, 0))
+        self._action_button(actions, "Emprunter le livre sélectionné", self._borrow_selected_book).pack(side="left")
 
-        my_borrowings_card = self._create_card(right, "Mes emprunts")
+        borrowings_card = self._create_card(right, "Mes emprunts")
         self.student_borrowings_tree = self._create_tree(
-            my_borrowings_card,
+            borrowings_card,
             ("id", "book_title", "borrow_date", "due_date", "status"),
             {
                 "id": ("ID", 50, "center"),
@@ -215,9 +356,11 @@ class MaktabatiApp:
                 "due_date": ("Retour prévu", 120, "center"),
                 "status": ("Statut", 90, "center"),
             },
-            height=8,
+            8,
         )
         self.student_borrowings_tree.pack(fill="both", expand=True)
+
+        self.refresh_student_views()
 
     def _create_card(self, parent, title):
         card = tk.Frame(parent, bg="#fffaf3", bd=1, relief="solid", padx=12, pady=12)
@@ -225,16 +368,14 @@ class MaktabatiApp:
         tk.Label(card, text=title, font=("Georgia", 14, "bold"), bg="#fffaf3", fg="#4b2e1f").pack(anchor="w", pady=(0, 8))
         return card
 
-    def _create_tree(self, parent, columns, column_config, height=10):
+    def _create_tree(self, parent, columns, column_config, height):
         frame = tk.Frame(parent, bg="#fffaf3")
         frame.pack(fill="both", expand=True)
-
         tree = ttk.Treeview(frame, columns=columns, show="headings", height=height)
         for column in columns:
             heading, width, anchor = column_config[column]
             tree.heading(column, text=heading)
             tree.column(column, width=width, anchor=anchor, stretch=anchor == "w")
-
         scrollbar = ttk.Scrollbar(frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
         tree.pack(side="left", fill="both", expand=True)
@@ -242,30 +383,22 @@ class MaktabatiApp:
         return tree
 
     def _action_button(self, parent, text, command):
-        return tk.Button(
-            parent,
-            text=text,
-            command=command,
-            bg="#6b4226",
-            fg="white",
-            activebackground="#5e4432",
-            bd=0,
-            padx=12,
-            pady=8,
-            cursor="hand2",
-        )
+        return tk.Button(parent, text=text, command=command, bg="#6b4226", fg="white", activebackground="#5e4432", bd=0, padx=12, pady=8, cursor="hand2")
 
-    def _labeled_entry(self, parent, label, variable):
+    def _labeled_entry(self, parent, label, variable, show=None, readonly_values=None):
         tk.Label(parent, text=label, bg="#fffaf3", fg="#4b2e1f").pack(anchor="w", pady=(6, 2))
-        tk.Entry(parent, textvariable=variable).pack(fill="x")
+        if readonly_values:
+            widget = ttk.Combobox(parent, textvariable=variable, state="readonly", values=list(readonly_values))
+            widget.pack(fill="x")
+            return widget
+        entry = tk.Entry(parent, textvariable=variable, show=show or "")
+        entry.pack(fill="x")
+        return entry
 
-    def refresh_all_views(self):
+    def refresh_admin_views(self):
         self._show_admin_books()
-        self._show_student_books()
         self._refresh_borrowings()
         self._refresh_blacklist()
-        self._refresh_student_borrowings()
-
         books = load_books()
         borrowings = get_all_borrowings()
         blacklisted = get_blacklisted_students()
@@ -274,99 +407,68 @@ class MaktabatiApp:
             f"Emprunts actifs: {len([item for item in borrowings if item['status'] != 'returned'])}\n"
             f"Étudiants en liste noire: {len(blacklisted)}"
         )
-
         self.admin_search.refresh()
+
+    def refresh_student_views(self):
+        self.current_student = find_student(self.current_user["student_id"]) if self.current_user else None
+        self._show_student_books()
+        self._refresh_student_borrowings()
+        if self.current_student:
+            self.student_info_var.set(
+                f"Nom : {self.current_student['first_name']} {self.current_student['last_name']}\n"
+                f"ID étudiant : {self.current_student['student_id']}\n"
+                f"Livres empruntés : {len(self.current_student.get('borrowed_book_ids', []))}"
+            )
         self.student_search.refresh()
 
     def _fill_books_tree(self, tree, books):
         for row in tree.get_children():
             tree.delete(row)
         for book in books:
-            tree.insert(
-                "",
-                "end",
-                iid=str(book["id"]),
-                values=(
-                    book["id"],
-                    book["title"],
-                    book["author"],
-                    book["year"],
-                    book["isbn"],
-                    book["status"],
-                ),
-            )
+            tree.insert("", "end", iid=str(book["id"]), values=(book["id"], book["title"], book["author"], book["year"], book["isbn"], book["status"]))
 
     def _show_admin_books(self, books=None):
         if books is None:
             books = load_books()
         self.admin_books = books
-        self._fill_books_tree(self.admin_books_tree, books)
+        if hasattr(self, "admin_books_tree"):
+            self._fill_books_tree(self.admin_books_tree, books)
 
     def _show_student_books(self, books=None):
         if books is None:
             books = load_books()
         self.student_books = books
-        self._fill_books_tree(self.student_books_tree, books)
+        if hasattr(self, "student_books_tree"):
+            self._fill_books_tree(self.student_books_tree, books)
 
     def _refresh_borrowings(self):
+        if not hasattr(self, "borrowings_tree"):
+            return
         for row in self.borrowings_tree.get_children():
             self.borrowings_tree.delete(row)
         for borrowing in get_all_borrowings():
-            status = borrowing["status"]
-            if borrowing["is_late"] and status != "returned":
-                status = "late"
-            self.borrowings_tree.insert(
-                "",
-                "end",
-                iid=borrowing["id"],
-                values=(
-                    borrowing["id"],
-                    borrowing["student_id"],
-                    borrowing["student_name"],
-                    borrowing["book_title"],
-                    borrowing["borrow_date"],
-                    borrowing["due_date"],
-                    status,
-                ),
-            )
+            status = "late" if borrowing["is_late"] and borrowing["status"] != "returned" else borrowing["status"]
+            self.borrowings_tree.insert("", "end", iid=borrowing["id"], values=(borrowing["id"], borrowing["student_id"], borrowing["student_name"], borrowing["book_title"], borrowing["borrow_date"], borrowing["due_date"], status))
 
     def _refresh_blacklist(self):
+        if not hasattr(self, "blacklist_tree"):
+            return
         for row in self.blacklist_tree.get_children():
             self.blacklist_tree.delete(row)
         for student in get_blacklisted_students():
-            books_text = ", ".join(
-                f"{item['book_title']} ({item['due_date']})" for item in student["late_books"]
-            )
-            self.blacklist_tree.insert(
-                "",
-                "end",
-                iid=student["student_id"],
-                values=(student["student_id"], student["student_name"], books_text),
-            )
+            books_text = ", ".join(f"{item['book_title']} ({item['due_date']})" for item in student["late_books"])
+            self.blacklist_tree.insert("", "end", iid=student["student_id"], values=(student["student_id"], student["student_name"], books_text))
 
     def _refresh_student_borrowings(self):
+        if not hasattr(self, "student_borrowings_tree"):
+            return
         for row in self.student_borrowings_tree.get_children():
             self.student_borrowings_tree.delete(row)
-
         if not self.current_student:
             return
-
         for borrowing in get_student_borrowings(self.current_student["student_id"]):
-            status = borrowing["status"]
-            if borrowing["is_late"] and status != "returned":
-                status = "late"
-            self.student_borrowings_tree.insert(
-                "",
-                "end",
-                iid=borrowing["id"],
-                values=(
-                    borrowing["id"],
-                    borrowing["book_title"],
-                    borrowing["borrow_date"],
-                    borrowing["due_date"],
-                    status,
-                ),
-            )
+            status = "late" if borrowing["is_late"] and borrowing["status"] != "returned" else borrowing["status"]
+            self.student_borrowings_tree.insert("", "end", iid=borrowing["id"], values=(borrowing["id"], borrowing["book_title"], borrowing["borrow_date"], borrowing["due_date"], status))
 
     def _open_add_form(self):
         win = tk.Toplevel(self.root)
@@ -375,7 +477,7 @@ class MaktabatiApp:
 
         def on_success():
             win.destroy()
-            self.refresh_all_views()
+            self.refresh_admin_views()
 
         BookForm(win, on_success=on_success)
 
@@ -384,7 +486,6 @@ class MaktabatiApp:
         if not selected:
             messagebox.showerror("Erreur", "Sélectionnez un livre à modifier.")
             return
-
         book = find_book(selected[0])
         if not book:
             messagebox.showerror("Erreur", "Livre introuvable.")
@@ -396,7 +497,7 @@ class MaktabatiApp:
 
         def on_success():
             win.destroy()
-            self.refresh_all_views()
+            self.refresh_admin_views()
 
         EditForm(win, book, on_success=on_success)
 
@@ -405,87 +506,54 @@ class MaktabatiApp:
         if not selected:
             messagebox.showerror("Erreur", "Sélectionnez un livre à supprimer.")
             return
-
         book = find_book(selected[0])
         if not book:
             messagebox.showerror("Erreur", "Livre introuvable.")
             return
-
         if not messagebox.askyesno("Confirmation", f"Supprimer '{book['title']}' ?"):
             return
-
         try:
             deleted = delete_book(book["id"])
         except ValueError as exc:
             messagebox.showerror("Erreur", str(exc))
             return
-
         if deleted:
             messagebox.showinfo("Succès", "Livre supprimé.")
-            self.refresh_all_views()
+            self.refresh_admin_views()
 
     def _return_selected_borrowing(self):
         selected = self.borrowings_tree.selection()
         if not selected:
             messagebox.showerror("Erreur", "Sélectionnez un emprunt.")
             return
-
         if not return_book(selected[0]):
             messagebox.showerror("Erreur", "Emprunt introuvable ou déjà retourné.")
             return
-
         messagebox.showinfo("Succès", "Retour enregistré.")
-        self.refresh_all_views()
-
-    def _load_or_create_student(self):
-        student_id = self.student_id_var.get().strip()
-        first_name = self.student_first_name_var.get().strip()
-        last_name = self.student_last_name_var.get().strip()
-
-        try:
-            student = upsert_student(student_id, first_name, last_name)
-        except ValueError as exc:
-            messagebox.showerror("Erreur", str(exc))
-            return
-
-        self.current_student = student
-        fresh_student = find_student(student["student_id"]) or student
-        self.current_student = fresh_student
-        self.student_info_var.set(
-            f"Étudiant chargé : {fresh_student['first_name']} {fresh_student['last_name']}\n"
-            f"ID : {fresh_student['student_id']}\n"
-            f"Livres empruntés : {len(fresh_student.get('borrowed_book_ids', []))}"
-        )
-        self._refresh_student_borrowings()
-        self.refresh_all_views()
+        self.refresh_admin_views()
 
     def _borrow_selected_book(self):
         selected = self.student_books_tree.selection()
         if not selected:
             messagebox.showerror("Erreur", "Sélectionnez un livre à emprunter.")
             return
-
-        student_id = self.student_id_var.get().strip()
-        first_name = self.student_first_name_var.get().strip()
-        last_name = self.student_last_name_var.get().strip()
         duration = self.borrow_duration_var.get().strip() or "14"
-
         if not duration.isdigit() or int(duration) <= 0:
             messagebox.showerror("Erreur", "La durée d'emprunt doit être un nombre positif.")
             return
-
         try:
-            borrowing = borrow_book(student_id, first_name, last_name, selected[0], int(duration))
+            borrowing = borrow_book(
+                self.current_user["student_id"],
+                self.current_user["first_name"],
+                self.current_user["last_name"],
+                selected[0],
+                int(duration),
+            )
         except ValueError as exc:
             messagebox.showerror("Erreur", str(exc))
             return
-
-        self.current_student = find_student(student_id)
-        messagebox.showinfo(
-            "Succès",
-            f"Emprunt enregistré.\nRetour prévu le {borrowing['due_date']}.",
-        )
-        self.refresh_all_views()
+        messagebox.showinfo("Succès", f"Emprunt enregistré.\nRetour prévu le {borrowing['due_date']}.")
+        self.refresh_student_views()
 
     def run(self):
         self.root.mainloop()

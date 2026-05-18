@@ -289,6 +289,51 @@ Les donnees sont stockees dans [data/books.json](/c:/Users/kouss/coding/book_man
 python main.py
 ```
 
+## Version executable
+
+Une version Windows executable est deja generee dans :
+
+- [dist/main.exe](/c:/Users/kouss/coding/book_manager_projet_orad/dist/main.exe)
+
+### Executer l'application
+
+Depuis l'explorateur Windows :
+
+- ouvrir le dossier `dist`
+- double-cliquer sur `main.exe`
+
+Depuis le terminal :
+
+```powershell
+.\dist\main.exe
+```
+
+### Regenerer le fichier `.exe`
+
+Le projet contient deja le fichier de configuration [main.spec](/c:/Users/kouss/coding/book_manager_projet_orad/main.spec:1).
+
+Si `PyInstaller` est installe, la commande de generation est :
+
+```bash
+pyinstaller main.spec
+```
+
+Le fichier genere sera ensuite disponible dans :
+
+- `dist/main.exe`
+
+### Donnees utilisees par l'executable
+
+L'executable embarque aussi le fichier de donnees :
+
+- [data/books.json](/c:/Users/kouss/coding/book_manager_projet_orad/data/books.json)
+
+Le fichier `main.spec` inclut deja cette ressource :
+
+```python
+datas=[('data/books.json', 'data')]
+```
+
 ## Tests
 
 Fichiers de tests disponibles :

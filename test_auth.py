@@ -39,9 +39,17 @@ def test_register_student_account_adds_user(monkeypatch):
 
     monkeypatch.setattr(auth_logic, "load_state", lambda: state)
     monkeypatch.setattr(auth_logic, "save_state", lambda data: saved.update({"state": data}))
-    monkeypatch.setattr(auth_logic, "upsert_student", lambda *args: None)
+    monkeypatch.setattr(
+        auth_logic,
+        "create_student",
+        lambda first_name, last_name: {
+            "student_id": "10",
+            "first_name": first_name,
+            "last_name": last_name,
+        },
+    )
 
-    user = auth_logic.register_student_account("aya", "1234", "E10", "Aya", "Benali")
+    user = auth_logic.register_student_account("aya", "1234", "Aya", "Benali")
 
     assert user["role"] == "student"
-    assert saved["state"]["users"][0]["student_id"] == "E10"
+    assert saved["state"]["users"][0]["student_id"] == "10"

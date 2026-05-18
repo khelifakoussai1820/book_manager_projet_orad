@@ -32,7 +32,6 @@ class MaktabatiApp:
 
         self.register_username_var = tk.StringVar()
         self.register_password_var = tk.StringVar()
-        self.register_student_id_var = tk.StringVar()
         self.register_first_name_var = tk.StringVar()
         self.register_last_name_var = tk.StringVar()
 
@@ -159,7 +158,6 @@ class MaktabatiApp:
 
         self._labeled_entry(register_card, "Nom d'utilisateur", self.register_username_var)
         self._labeled_entry(register_card, "Mot de passe", self.register_password_var, show="*")
-        self._labeled_entry(register_card, "ID étudiant", self.register_student_id_var)
         self._labeled_entry(register_card, "Prénom", self.register_first_name_var)
         self._labeled_entry(register_card, "Nom", self.register_last_name_var)
 
@@ -196,7 +194,6 @@ class MaktabatiApp:
             user = register_student_account(
                 self.register_username_var.get(),
                 self.register_password_var.get(),
-                self.register_student_id_var.get(),
                 self.register_first_name_var.get(),
                 self.register_last_name_var.get(),
             )
@@ -209,10 +206,9 @@ class MaktabatiApp:
         self.login_password_var.set(user["password"])
         self.register_username_var.set("")
         self.register_password_var.set("")
-        self.register_student_id_var.set("")
         self.register_first_name_var.set("")
         self.register_last_name_var.set("")
-        messagebox.showinfo("Succès", "Compte étudiant créé. Vous pouvez vous connecter.")
+        messagebox.showinfo("Succès", f"Compte étudiant créé avec l'ID {user['student_id']}. Vous pouvez vous connecter.")
 
     def _logout(self):
         self.login_password_var.set("")

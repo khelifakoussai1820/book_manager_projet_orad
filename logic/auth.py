@@ -1,5 +1,5 @@
 from logic.storage import load_state, save_state
-from logic.student import upsert_student
+from logic.student import create_student
 
 
 def authenticate_user(username, password, role):
@@ -13,28 +13,24 @@ def authenticate_user(username, password, role):
     return None
 
 
-def register_student_account(username, password, student_id, first_name, last_name):
+def register_student_account(username, password, first_name, last_name):
     username = username.strip()
     password = password.strip()
-    student_id = student_id.strip()
     first_name = first_name.strip()
     last_name = last_name.strip()
 
     if not username or not password:
         raise ValueError("Le nom d'utilisateur et le mot de passe sont obligatoires.")
-    if not student_id or not first_name or not last_name:
+    if not first_name or not last_name:
         raise ValueError("Les informations étudiant sont obligatoires.")
 
     state = load_state()
     if any(user["username"].lower() == username.lower() for user in state["users"]):
         raise ValueError("Ce nom d'utilisateur existe déjà.")
-    if any(
-        user["role"] == "student" and user["student_id"] == student_id
-        for user in state["users"]
-    ):
-        raise ValueError("Cet identifiant étudiant est déjà lié à un compte.")
 
-    upsert_student(student_id, first_name, last_name)
+    student = create_student(first_name, last_name)
+    student_id = student["student_id"]
+
     state = load_state()
     user = {
         "username": username,

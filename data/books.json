@@ -1,12 +1,12 @@
 {
-    "book": [
+    "books": [
         {
             "id": "1",
             "title": "The Great Gatsby",
             "author": "F. Scott Fitzgerald",
             "year": 1925,
             "isbn": "978-0743273565",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "2",
@@ -22,7 +22,7 @@
             "author": "George Orwell",
             "year": 1949,
             "isbn": "978-0451524935",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "4",
@@ -38,7 +38,7 @@
             "author": "Aldous Huxley",
             "year": 1932,
             "isbn": "978-0060850524",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "6",
@@ -54,7 +54,7 @@
             "author": "J. D. Salinger",
             "year": 1951,
             "isbn": "978-0316769488",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "9",
@@ -62,7 +62,7 @@
             "author": "Jane Austen",
             "year": 1813,
             "isbn": "978-1503290563",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "10",
@@ -78,7 +78,7 @@
             "author": "Paulo Coelho",
             "year": 1988,
             "isbn": "978-0061122415",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "12",
@@ -86,7 +86,7 @@
             "author": "Antoine de Saint-Exupery",
             "year": 1943,
             "isbn": "978-0156013987",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "13",
@@ -102,7 +102,7 @@
             "author": "Kristin Hannah",
             "year": 2018,
             "isbn": "978-0312577230",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "15",
@@ -110,7 +110,7 @@
             "author": "Cormac McCarthy",
             "year": 2006,
             "isbn": "978-0307387899",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "16",
@@ -126,7 +126,7 @@
             "author": "Andy Weir",
             "year": 2011,
             "isbn": "978-0553418026",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "18",
@@ -142,7 +142,7 @@
             "author": "Yuval Noah Harari",
             "year": 2011,
             "isbn": "978-0062316097",
-            "status": "borrowed"
+            "status": "available"
         },
         {
             "id": "20",
@@ -153,7 +153,7 @@
             "status": "available"
         },
         {
-            "id": 21,
+            "id": "21",
             "title": "Le Petit Prince",
             "author": "Antoine de Saint-Exupéry",
             "year": 1943,
@@ -161,12 +161,14 @@
             "status": "available"
         },
         {
-            "id": 22,
-            "title": "aljebre",
-            "author": "el khwarizmi",
+            "id": "22",
+            "title": "Aljèbre",
+            "author": "Al-Khwarizmi",
             "year": 1123,
             "isbn": "978-0061122415",
             "status": "available"
         }
-    ]
+    ],
+    "students": [],
+    "borrowings": []
 }
